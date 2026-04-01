@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDA Profesional · GranerosDB · Informe Ejecutivo 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #1a2e4a;
+    --accent: #e8a020;
+    --green: #27ae60;
+    --red: #e74c3c;
+    --blue: #2980b9;
+    --purple: #8e44ad;
+    --gray: #ecf0f1;
+    --text: #2c3e50;
+    --card-bg: #ffffff;
+    --border: #dde3ea;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: var(--text); }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #1a2e4a 0%, #0d1f35 60%, #162844 100%);
+    padding: 40px 48px 32px;
+    color: white;
+    border-bottom: 4px solid var(--accent);
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+  .header p.sub { color: #a8c0d6; margin-top: 6px; font-size: 0.95rem; }
+  .badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+  .header-meta { display: flex; gap: 32px; margin-top: 24px; }
+  .meta-item { text-align: center; }
+  .meta-item .val { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+  .meta-item .lbl { font-size: 0.72rem; text-transform: uppercase; color: #a8c0d6; letter-spacing: 0.8px; margin-top: 2px; }
+  .divider { width: 1px; background: rgba(255,255,255,0.15); }
+
+  /* ── NAV TABS ── */
+  .nav-tabs { display: flex; background: var(--primary); padding: 0 48px; border-bottom: 1px solid rgba(255,255,255,0.1); overflow-x: auto; }
+  .nav-tab { padding: 14px 20px; color: #a8c0d6; font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .nav-tab:hover { color: white; }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1400px; margin: 0 auto; padding: 32px 48px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .section-title { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: ''; display: block; width: 4px; height: 22px; background: var(--accent); border-radius: 2px; }
+  .section-desc { color: #7f8c9d; font-size: 0.88rem; margin-bottom: 24px; }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .kpi-card { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .kpi-card::after { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+  .kpi-card.green::after { background: var(--green); }
+  .kpi-card.red::after { background: var(--red); }
+  .kpi-card.blue::after { background: var(--blue); }
+  .kpi-card.orange::after { background: var(--accent); }
+  .kpi-card.purple::after { background: var(--purple); }
+  .kpi-val { font-size: 1.8rem; font-weight: 700; color: var(--primary); line-height: 1; }
+  .kpi-label { font-size: 0.75rem; color: #7f8c9d; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 6px; }
+  .kpi-sub { font-size: 0.8rem; color: #95a5a6; margin-top: 4px; }
+  .kpi-trend { font-size: 0.8rem; margin-top: 8px; font-weight: 600; }
+  .kpi-trend.up { color: var(--green); }
+  .kpi-trend.down { color: var(--red); }
+  .kpi-trend.warn { color: var(--accent); }
+
+  /* ── CHART CONTAINERS ── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .chart-grid-wide { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .chart-card { background: var(--card-bg); border-radius: 12px; padding: 24px; border: 1px solid var(--border); }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 0.95rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+  .chart-subtitle { font-size: 0.78rem; color: #95a5a6; margin-bottom: 18px; }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 360px; }
+
+  /* ── INSIGHT BOXES ── */
+  .insight-box { border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; border-left: 4px solid; }
+  .insight-box.critical { background: #fdf0ef; border-color: var(--red); }
+  .insight-box.warning { background: #fef9ec; border-color: var(--accent); }
+  .insight-box.positive { background: #edfaf2; border-color: var(--green); }
+  .insight-box.info { background: #ebf5fb; border-color: var(--blue); }
+  .insight-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; }
+  .insight-box.critical .insight-title { color: var(--red); }
+  .insight-box.warning .insight-title { color: #c87a00; }
+  .insight-box.positive .insight-title { color: #1e8449; }
+  .insight-box.info .insight-title { color: var(--blue); }
+  .insight-text { font-size: 0.84rem; color: #555; line-height: 1.5; }
+
+  /* ── TABLES ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .data-table th { background: var(--primary); color: white; padding: 10px 14px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #eef1f4; }
+  .data-table tr:hover td { background: #f8fafc; }
+  .data-table .num { text-align: right; font-weight: 600; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .pill.green { background: #d5f5e3; color: #1e8449; }
+  .pill.red { background: #fadbd8; color: #c0392b; }
+  .pill.orange { background: #fdebd0; color: #935116; }
+
+  /* ── WATERFALL ── */
+  .waterfall-chart { display: flex; align-items: flex-end; gap: 4px; height: 240px; padding: 0 8px; }
+  .wf-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .wf-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 8px; position: relative; }
+  .wf-label { font-size: 0.7rem; text-align: center; color: #555; word-break: break-word; }
+  .wf-value { font-size: 0.72rem; font-weight: 700; text-align: center; }
+
+  /* ── GAUGE ── */
+  .gauge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 28px; }
+  .gauge-card { background: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border); text-align: center; }
+  .gauge-title { font-size: 0.82rem; font-weight: 700; color: var(--primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .gauge-wrap { position: relative; height: 130px; display: flex; align-items: center; justify-content: center; }
+  .gauge-value { font-size: 1.6rem; font-weight: 700; }
+  .gauge-sub { font-size: 0.75rem; color: #95a5a6; margin-top: 4px; }
+
+  /* ── FUNNEL ── */
+  .funnel { padding: 12px 0; }
+  .funnel-row { display: flex; align-items: center; margin-bottom: 8px; gap: 12px; }
+  .funnel-bar-bg { flex: 1; background: #eef1f4; border-radius: 4px; height: 36px; position: relative; overflow: hidden; }
+  .funnel-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 14px; color: white; font-size: 0.82rem; font-weight: 600; transition: width 0.8s; }
+  .funnel-label { width: 130px; font-size: 0.82rem; color: #555; text-align: right; }
+  .funnel-pct { width: 48px; font-size: 0.82rem; font-weight: 700; color: var(--primary); }
+
+  /* ── HEATMAP ── */
+  .heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .hm-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 600; color: white; cursor: default; }
+  .hm-legend { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.75rem; color: #7f8c9d; }
+  .hm-legend-bar { display: flex; gap: 2px; }
+  .hm-legend-swatch { width: 18px; height: 12px; border-radius: 2px; }
+
+  /* ── RECOMMENDATIONS ── */
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rec-card { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; border: 1px solid var(--border); }
+  .rec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .rec-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; color: white; flex-shrink: 0; }
+  .rec-title { font-size: 0.92rem; font-weight: 700; color: var(--primary); }
+  .rec-body { font-size: 0.84rem; color: #555; line-height: 1.6; }
+  .rec-impact { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .rec-impact.high { background: #fadbd8; color: #c0392b; }
+  .rec-impact.med { background: #fdebd0; color: #935116; }
+  .rec-impact.low { background: #d5f5e3; color: #1e8449; }
+
+  /* ── FOOTER ── */
+  .footer { background: var(--primary); color: #a8c0d6; text-align: center; padding: 20px; font-size: 0.8rem; margin-top: 40px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .chart-grid, .chart-grid-wide, .rec-grid { grid-template-columns: 1fr; }
+    .chart-grid-3 { grid-template-columns: 1fr 1fr; }
+    .gauge-grid { grid-template-columns: 1fr; }
+    .container { padding: 20px; }
+    .header { padding: 24px 20px; }
+    .nav-tabs { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div style="color:#a8c0d6;font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Informe de Business Intelligence</div>
+      <h1>EDA Profesional · GranerosDB</h1>
+      <p class="sub">Análisis Exploratorio Exhaustivo · Base de datos ERP Agronegocio · SQL Server Express v16</p>
+    </div>
+    <div style="text-align:right;">
+      <span class="badge">Confidencial</span>
+      <div style="color:#a8c0d6;font-size:0.78rem;margin-top:8px;">Generado: Marzo 2026</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item"><div class="val">27,900+</div><div class="lbl">Transacciones Totales</div></div>
+    <div class="divider"></div>
+    <div class="meta-item"><div class="val">$537M</div><div class="lbl">Ingresos Brutos</div></div>
+    <div class="divider"></div>
+    <div class="meta-item"><div class="val">404</div><div class="lbl">Clientes Registrados</div></div>
+    <div class="divider"></div>
+    <div class="meta-item"><div class="val">28</div><div class="lbl">Tablas en ERP</div></div>
+    <div class="divider"></div>
+    <div class="meta-item"><div class="val">5</div><div class="lbl">KPIs North Star</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ NAV TABS ══════════════════ -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="showSection('overview')">📊 Resumen Ejecutivo</div>
+  <div class="nav-tab" onclick="showSection('quality')">🔍 Calidad de Datos</div>
+  <div class="nav-tab" onclick="showSection('volume')">📈 Volumen & Estacionalidad</div>
+  <div class="nav-tab" onclick="showSection('products')">🌽 Análisis de Productos</div>
+  <div class="nav-tab" onclick="showSection('customers')">👥 Clientes & Comercial</div>
+  <div class="nav-tab" onclick="showSection('finance')">💰 Finanzas & Rentabilidad</div>
+  <div class="nav-tab" onclick="showSection('outliers')">⚡ Outliers & Riesgos</div>
+  <div class="nav-tab" onclick="showSection('kpis')">🎯 KPIs North Star</div>
+  <div class="nav-tab" onclick="showSection('recommendations')">🚀 Recomendaciones</div>
+</div>
+
+<!-- ══════════════════ SECTIONS ══════════════════ -->
+<div class="container">
+
+<!-- ── SECTION 1: RESUMEN EJECUTIVO ── -->
+<div id="overview" class="section active">
+  <div class="section-title">Resumen Ejecutivo del EDA</div>
+  <div class="section-desc">Vista consolidada de los hallazgos más críticos extraídos del análisis exhaustivo de la base de datos ERP.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-val">$405M</div>
+      <div class="kpi-label">Revenue MAÍZ</div>
+      <div class="kpi-sub">Producto estrella dominante</div>
+      <div class="kpi-trend up">▲ 75.4% del total</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-val">44.63%</div>
+      <div class="kpi-label">Margen Bruto MAÍZ</div>
+      <div class="kpi-sub">WAC: $4.76 · Venta: $8.59</div>
+      <div class="kpi-trend up">▲ Muy saludable</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-val">44%</div>
+      <div class="kpi-label">Tasa de Dormancia</div>
+      <div class="kpi-sub">177 clientes inactivos &gt;180 días</div>
+      <div class="kpi-trend down">▼ RIESGO CRÍTICO</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-val">40.06%</div>
+      <div class="kpi-label">OPEX / Revenue</div>
+      <div class="kpi-sub">$215M OPEX · $537M Ingresos</div>
+      <div class="kpi-trend warn">⚠ Alto para agronegocios</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-val">5.2%</div>
+      <div class="kpi-label">Tasa de Cancelaciones</div>
+      <div class="kpi-sub">602 txns canceladas (CONTADO)</div>
+      <div class="kpi-trend warn">⚠ Requiere auditoría</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-val">1,273</div>
+      <div class="kpi-label">Transacciones Outlier</div>
+      <div class="kpi-sub">Superan fence IQR $112K</div>
+      <div class="kpi-trend warn">⚠ Flag como BULK</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Composición de Ingresos por Canal</div>
+      <div class="chart-subtitle">CREDITO vs CONTADO — Distribución de Transacciones</div>
+      <div class="chart-wrap">
+        <canvas id="revenueCompositionChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">EBITDA Guard — Cascada de Rentabilidad</div>
+      <div class="chart-subtitle">Descomposición de ingresos hasta resultado operativo estimado</div>
+      <div class="chart-wrap">
+        <canvas id="waterfallChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid-wide">
+    <div class="chart-card">
+      <div class="chart-title">Top 5 Productos por Volumen de Transacciones</div>
+      <div class="chart-subtitle">Número de operaciones registradas en CREDITO_DATA</div>
+      <div class="chart-wrap">
+        <canvas id="topProductsVolumeChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Estado Comercial de Clientes</div>
+      <div class="chart-subtitle">Activos vs Dormantes (>180 días sin compra)</div>
+      <div class="chart-wrap">
+        <canvas id="customerStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box critical">
+    <div class="insight-title">🚨 Hallazgo Crítico #1 — Concentración de Riesgo en MAÍZ</div>
+    <div class="insight-text">MAÍZ representa el 75%+ del revenue total con 9,526 transacciones. Un shock de precio en el mercado de commodities o pérdida de proveedores clave podría impactar catastróficamente el EBITDA. Se recomienda diversificación de portafolio inmediata.</div>
+  </div>
+  <div class="insight-box warning">
+    <div class="insight-title">⚠ Hallazgo Crítico #2 — Brecha de Datos en DESTINO</div>
+    <div class="insight-text">El ERP captura DESTINO (centro de costo/sucursal) en GASTOS_DATA pero NO en CREDITO_DATA ni CONTADO_DATA. Esto hace imposible calcular el EBITDA real por ubicación sin un mapeo manual de CLIENTE→REGIÓN. Acción correctiva urgente requerida.</div>
+  </div>
+  <div class="insight-box positive">
+    <div class="insight-title">✅ Hallazgo Positivo — Calidad de Datos Excepcional</div>
+    <div class="insight-text">0% de NULLs en la columna crítica TOTAL en todas las tablas transaccionales principales. La disciplina contable del ERP es sobresaliente. Solo 13 registros huérfanos detectados en ~28K transacciones (0.05%).</div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: CALIDAD DE DATOS ── -->
+<div id="quality" class="section">
+  <div class="section-title">Auditoría de Calidad de Datos</div>
+  <div class="section-desc">Evaluación de integridad referencial, distribución de NULLs y riesgos de consistencia en toda la base de datos ERP.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-val">0%</div><div class="kpi-label">NULLs en TOTAL</div><div class="kpi-sub">Columna financiera crítica</div><div class="kpi-trend up">▲ Excelente</div></div>
+    <div class="kpi-card red"><div class="kpi-val">13</div><div class="kpi-label">Registros Huérfanos</div><div class="kpi-sub">Sin match en dimensiones</div><div class="kpi-trend down">▼ Bajo pero presente</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">0</div><div class="kpi-label">FK Constraints en BD</div><div class="kpi-sub">Integridad a nivel aplicación</div><div class="kpi-trend warn">⚠ Riesgo latente</div></div>
+    <div class="kpi-card blue"><div class="kpi-val">28+</div><div class="kpi-label">Tablas Inventariadas</div><div class="kpi-sub">8 dims + 20 hechos</div><div class="kpi-trend up">▲ Catalogadas</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Auditoría de Integridad Referencial</div>
+      <div class="chart-subtitle">Registros huérfanos detectados por relación (sin FK a nivel BD)</div>
+      <div class="chart-wrap">
+        <canvas id="orphanChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Completitud de Columnas Clave</div>
+      <div class="chart-subtitle">% de completitud (no-NULL) en campos críticos</div>
+      <div class="chart-wrap">
+        <canvas id="completenessChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Inventario de Tablas ERP — Clasificación por Tipo y Riesgo</div>
+    <div class="chart-subtitle">Mapa completo de entidades: Dimensiones (Catálogos) vs Hechos (Transacciones)</div>
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tabla</th><th>Tipo</th><th>Filas (Est.)</th><th>Columna Clave</th><th>NULLs en TOTAL</th><th>FK Level</th><th>Riesgo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>CREDITO_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">16,400</td><td>TOTAL, CLIENTE</td><td>0%</td><td>App-level</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>CONTADO_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">11,500</td><td>TOTAL, CLIENTE</td><td>0%</td><td>App-level</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>COMPRAS_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~8,000</td><td>IMPORTE, PROVEEDOR</td><td>0%</td><td>App-level</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>COBRANZA_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~5,000</td><td>IMPORTE, CLIENTE</td><td>Nullable</td><td>App-level</td><td><span class="pill orange">Medio</span></td></tr>
+          <tr><td>GASTOS_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~4,000</td><td>IMPORTE, DESTINO</td><td>Nullable</td><td>App-level</td><td><span class="pill orange">Medio</span></td></tr>
+          <tr><td>TRANSPORTE_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~3,500</td><td>COSTO, DESTINO</td><td>Nullable</td><td>App-level</td><td><span class="pill orange">Medio</span></td></tr>
+          <tr><td>CRIBA_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~2,000</td><td>BULTOS, MERMA</td><td>Nullable</td><td>App-level</td><td><span class="pill orange">Medio</span></td></tr>
+          <tr><td>DEV_VENTA_DATA</td><td><span class="pill orange">Hecho</span></td><td class="num">~800</td><td>TOTAL</td><td>Nullable</td><td>App-level</td><td><span class="pill red">Alto</span></td></tr>
+          <tr><td>CATALOGO_CLIENTES_DATA</td><td><span class="pill blue">Dimensión</span></td><td class="num">404</td><td>CODIGO</td><td>N/A</td><td>PK</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>CATALOGO_PRODUCTOS_DATA</td><td><span class="pill blue">Dimensión</span></td><td class="num">~150</td><td>CODIGO</td><td>N/A</td><td>PK</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>CATALOGO_PROVEEDORES_DATA</td><td><span class="pill blue">Dimensión</span></td><td class="num">~80</td><td>CODIGO</td><td>N/A</td><td>PK</td><td><span class="pill green">Bajo</span></td></tr>
+          <tr><td>CARGA_MASIVA_* (bulk)</td><td><span class="pill red">Temporal</span></td><td class="num">Variable</td><td>—</td><td>Variable</td><td>None</td><td><span class="pill red">Alto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight-box warning">
+    <div class="insight-title">⚠ Alerta de Arquitectura — Sin Foreign Keys a Nivel Base de Datos</div>
+    <div class="insight-text">Las relaciones entre tablas de hechos y dimensiones existen SOLO a nivel de aplicación, no como constraints de BD. Esto significa que SQL Server no puede prevenir automáticamente la inserción de registros con CLIENTE o PRODUCTO inválidos. Se detectaron 10 transacciones en CREDITO_DATA con CLIENTE inexistente en el catálogo, y 2 en CONTADO_DATA. Estrategia de mitigación: aplicar mapeo a "CÓDIGO 999 = DESCONOCIDO" en el Gold ETL Layer.</div>
+  </div>
+  <div class="insight-box info">
+    <div class="insight-title">ℹ Estándar de Sintaxis SQL — Columnas con Espacios</div>
+    <div class="insight-text">Múltiples columnas contienen espacios en sus nombres: [FORMA DE PAGO], [CONCEPTO DIVERSO], [BANCO ORIGEN]. Todo el SQL generado DEBE usar corchetes [ ] para evitar errores de parseo. El pipeline ETL ya incorpora este estándar.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 3: VOLUMEN & ESTACIONALIDAD ── -->
+<div id="volume" class="section">
+  <div class="section-title">Volumen Transaccional & Análisis de Velocidad</div>
+  <div class="section-desc">Descomposición temporal de las operaciones en CREDITO_DATA y CONTADO_DATA para detectar patrones estacionales y aceleraciones comerciales.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue"><div class="kpi-val">16,400</div><div class="kpi-label">Txns en CREDITO</div><div class="kpi-sub">Canal crédito principal</div></div>
+    <div class="kpi-card green"><div class="kpi-val">11,500</div><div class="kpi-label">Txns en CONTADO</div><div class="kpi-sub">Canal contado</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">27,900+</div><div class="kpi-label">Total Transacciones</div><div class="kpi-sub">Ambos canales</div></div>
+    <div class="kpi-card purple"><div class="kpi-val">59%</div><div class="kpi-label">Mix Crédito</div><div class="kpi-sub">vs 41% Contado</div></div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Simulación de Tendencia Transaccional Mensual</div>
+    <div class="chart-subtitle">Distribución estimada de volumen a lo largo del año (basada en patrones ERP detectados)</div>
+    <div class="chart-wrap tall">
+      <canvas id="monthlyTrendChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Distribución por Canal de Venta</div>
+      <div class="chart-subtitle">Crédito vs Contado — Transacciones activas y canceladas</div>
+      <div class="chart-wrap">
+        <canvas id="channelDistChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Velocidad de Transacciones — Patrón Semanal</div>
+      <div class="chart-subtitle">Días de mayor actividad transaccional (patrón estimado)</div>
+      <div class="chart-wrap">
+        <canvas id="weeklyVelocityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Heatmap de Intensidad — Volumen por Mes y Canal</div>
+    <div class="chart-subtitle">Mayor intensidad = mayor volumen relativo detectado. Basado en patrones de estacionalidad agroindustrial.</div>
+    <div style="margin-top:16px;">
+      <div style="display:flex;gap:40px;margin-bottom:12px;">
+        <div style="font-size:0.8rem;font-weight:600;color:#555;width:80px;">CRÉDITO</div>
+        <div id="heatmapCredito" class="heatmap-grid" style="flex:1;"></div>
+      </div>
+      <div style="display:flex;gap:40px;">
+        <div style="font-size:0.8rem;font-weight:600;color:#555;width:80px;">CONTADO</div>
+        <div id="heatmapContado" class="heatmap-grid" style="flex:1;"></div>
+      </div>
+      <div class="hm-legend">
+        <span>Bajo</span>
+        <div class="hm-legend-bar">
+          <div class="hm-legend-swatch" style="background:#e8f4fd;"></div>
+          <div class="hm-legend-swatch" style="background:#7fb3d3;"></div>
+          <div class="hm-legend-swatch" style="background:#2980b9;"></div>
+          <div class="hm-legend-swatch" style="background:#1a5276;"></div>
+          <div class="hm-legend-swatch" style="background:#0d2137;"></div>
+        </div>
+        <span>Alto</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box info">
+    <div class="insight-title">ℹ Patrón de Estacionalidad Agroindustrial</div>
+    <div class="insight-text">Los negocios de granos como MAÍZ típicamente presentan picos de actividad en épocas de cosecha (Abril-Junio y Octubre-Noviembre en México). El ERP registra patrones consistentes con este comportamiento. Los meses de baja actividad son candidatos para campañas de reactivación de clientes dormantes.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 4: ANÁLISIS DE PRODUCTOS ── -->
+<div id="products" class="section">
+  <div class="section-title">Análisis Dimensional de Productos</div>
+  <div class="section-desc">Perfil de cardinality, dominancia categórica y análisis de márgenes unitarios por producto estratégico.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-val">$383M</div><div class="kpi-label">Revenue MAÍZ</div><div class="kpi-sub">9,526 transacciones</div><div class="kpi-trend up">▲ 44.6% margen</div></div>
+    <div class="kpi-card blue"><div class="kpi-val">$4.76</div><div class="kpi-label">WAC MAÍZ</div><div class="kpi-sub">Costo promedio ponderado</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">$8.59</div><div class="kpi-label">Precio Venta MAÍZ</div><div class="kpi-sub">Promedio por unidad</div></div>
+    <div class="kpi-card purple"><div class="kpi-val">~150</div><div class="kpi-label">Productos en Catálogo</div><div class="kpi-sub">SKUs registrados</div></div>
+  </div>
+
+  <div class="chart-grid-wide">
+    <div class="chart-card">
+      <div class="chart-title">Revenue por Producto Estratégico — TOP 6</div>
+      <div class="chart-subtitle">Volumen de ventas en millones de pesos por producto principal</div>
+      <div class="chart-wrap tall">
+        <canvas id="productRevenueChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Concentración de Cartera (Efecto Pareto)</div>
+      <div class="chart-subtitle">MAÍZ vs todo el resto del portafolio</div>
+      <div class="chart-wrap tall">
+        <canvas id="paretoChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Análisis Margen % vs Volumen — Matriz BCG Simplificada</div>
+    <div class="chart-subtitle">Cuadrante de rentabilidad: Mayor burbuja = mayor revenue. Eje X = Margen Bruto %, Eje Y = Volumen Transacciones</div>
+    <div class="chart-wrap tall">
+      <canvas id="bcgChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Tabla de Márgenes Unitarios por Producto</div>
+    <div class="chart-subtitle">WAC (Costo Promedio Ponderado) vs Precio de Venta → Margen de Contribución</div>
+    <table class="data-table" style="margin-top:12px;">
+      <thead>
+        <tr><th>Producto</th><th>WAC ($/u)</th><th>Precio Venta ($/u)</th><th>Margen $</th><th>Margen %</th><th>Txns</th><th>Revenue Total</th><th>Clasificación</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>MAÍZ</td><td class="num">$4.76</td><td class="num">$8.59</td><td class="num">$3.83</td><td class="num">44.63%</td><td class="num">9,526</td><td class="num">$405M</td><td><span class="pill green">⭐ Estrella</span></td></tr>
+        <tr><td>PAPELCA 2</td><td class="num">~$12.50</td><td class="num">~$14.50</td><td class="num">~$2.00</td><td class="num">13.8%</td><td class="num">~1,200</td><td class="num">~$52M</td><td><span class="pill green">✅ Saludable</span></td></tr>
+        <tr><td>SALT 25</td><td class="num">~$8.20</td><td class="num">~$9.50</td><td class="num">~$1.30</td><td class="num">13.7%</td><td class="num">~950</td><td class="num">~$38M</td><td><span class="pill green">✅ Saludable</span></td></tr>
+        <tr><td>SALT 45</td><td class="num">~$9.80</td><td class="num">~$11.20</td><td class="num">~$1.40</td><td class="num">12.5%</td><td class="num">~820</td><td class="num">~$32M</td><td><span class="pill green">✅ Saludable</span></td></tr>
+        <tr><td>Otros (&gt;140 SKUs)</td><td class="num">Variable</td><td class="num">Variable</td><td class="num">Variable</td><td class="num">8.3%-15.7%</td><td class="num">~3,900</td><td class="num">~$10M</td><td><span class="pill orange">⚠ Monitorear</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight-box critical">
+    <div class="insight-title">🚨 Riesgo de Concentración — Dependencia Extrema en MAÍZ</div>
+    <div class="insight-text">Con MAÍZ representando más del 75% del revenue total, el negocio está altamente expuesto a: 1) Volatilidad en precios de commodities agrícolas, 2) Fallas en la cadena de proveedores de MAÍZ, 3) Regulaciones gubernamentales sobre el cultivo. La Matriz BCG indica que el negocio está en fase "Cash Cow" en MAÍZ y necesita identificar el próximo producto "Estrella" para sostener el crecimiento.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 5: CLIENTES & COMERCIAL ── -->
+<div id="customers" class="section">
+  <div class="section-title">Análisis Comercial & Perfil de Clientes</div>
+  <div class="section-desc">Segmentación de base de clientes, análisis de dormancia, riesgo de concentración y oportunidades de recuperación comercial.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue"><div class="kpi-val">404</div><div class="kpi-label">Clientes Totales</div><div class="kpi-sub">En CATALOGO_CLIENTES</div></div>
+    <div class="kpi-card green"><div class="kpi-val">227</div><div class="kpi-label">Clientes Activos</div><div class="kpi-sub">56% de la base total</div><div class="kpi-trend up">▲ Activos (&lt;180 días)</div></div>
+    <div class="kpi-card red"><div class="kpi-val">177</div><div class="kpi-label">Clientes Dormantes</div><div class="kpi-sub">44% de la base total</div><div class="kpi-trend down">▼ &gt;180 días sin compra</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">5.2%</div><div class="kpi-label">Tasa Cancelación</div><div class="kpi-sub">602/11,527 en CONTADO</div><div class="kpi-trend warn">⚠ Límite: 5%</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Pirámide de Actividad de Clientes</div>
+      <div class="chart-subtitle">Segmentación por frecuencia de compra (estimada)</div>
+      <div class="chart-wrap">
+        <canvas id="customerPyramidChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Riesgo de Dormancia por Segmento</div>
+      <div class="chart-subtitle">Distribución de clientes por tiempo sin actividad</div>
+      <div class="chart-wrap">
+        <canvas id="dormancyRiskChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Embudo de Conversión Comercial — Estado del Pipeline</div>
+    <div class="chart-subtitle">Flujo desde clientes registrados hasta transacciones activas</div>
+    <div class="funnel" style="padding:20px 40px;">
+      <div class="funnel-row">
+        <div class="funnel-label">Clientes Registrados</div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar" style="width:100%;background:#2980b9;">404 clientes</div>
+        </div>
+        <div class="funnel-pct">100%</div>
+      </div>
+      <div class="funnel-row">
+        <div class="funnel-label">Con Historial Txn</div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar" style="width:85%;background:#27ae60;">~344 clientes</div>
+        </div>
+        <div class="funnel-pct">~85%</div>
+      </div>
+      <div class="funnel-row">
+        <div class="funnel-label">Activos (&lt;180 días)</div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar" style="width:56%;background:#e8a020;">227 clientes</div>
+        </div>
+        <div class="funnel-pct">56%</div>
+      </div>
+      <div class="funnel-row">
+        <div class="funnel-label">Alto Valor (Top 20%)</div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar" style="width:20%;background:#8e44ad;">~45 clientes</div>
+        </div>
+        <div class="funnel-pct">~20%</div>
+      </div>
+      <div class="funnel-row">
+        <div class="funnel-label">Dormantes (&gt;180d)</div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar" style="width:44%;background:#e74c3c;">177 clientes</div>
+        </div>
+        <div class="funnel-pct">44%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Distribución de Cancelaciones por Estado</div>
+      <div class="chart-subtitle">CONTADO_DATA — ACTIVA vs CANCELADA</div>
+      <div class="chart-wrap">
+        <canvas id="cancellationChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Potencial de Recuperación Comercial</div>
+      <div class="chart-subtitle">Revenue recuperable si se reactivan clientes dormantes (estimado 30% de conv.)</div>
+      <div class="chart-wrap">
+        <canvas id="recoveryChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box critical">
+    <div class="insight-title">🚨 Alarma Comercial — Tasa de Dormancia 44% SUPERA el Umbral del 40%</div>
+    <div class="insight-text">Con 177 clientes inactivos por más de 180 días, la tasa de dormancia (44%) ha superado el umbral crítico estratégico (40%). Acción inmediata mandatoria: el equipo comercial debe ejecutar una campaña de win-back estructurada. Si cada cliente dormante tiene un ticket promedio de ~$50K/año, el potencial de recuperación asciende a ~$8.85M anuales.</div>
+  </div>
+  <div class="insight-box warning">
+    <div class="insight-title">⚠ Alerta de Cancelaciones — Tasa 5.2% Supera el Umbral del 5%</div>
+    <div class="insight-text">La tasa de cancelación en CONTADO_DATA (5.2%) ha cruzado el umbral de riesgo del 5%. Recomendación estratégica: auditar los usuarios en LOGIN_ACCESS_DATA para identificar si hay un patrón de cancellaciones concentradas en pocos operadores del sistema. Esto podría indicar error humano sistémico o comportamiento fraudulento.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 6: FINANZAS & RENTABILIDAD ── -->
+<div id="finance" class="section">
+  <div class="section-title">Análisis Financiero & Motor de Rentabilidad</div>
+  <div class="section-desc">Descomposición de OPEX, márgenes de contribución, estructura de costos y evaluación de salud financiera del negocio.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-val">$537M</div><div class="kpi-label">Revenue Bruto Total</div><div class="kpi-sub">CREDITO + CONTADO combinado</div></div>
+    <div class="kpi-card red"><div class="kpi-val">$215M</div><div class="kpi-label">OPEX Total</div><div class="kpi-sub">40.06% del Revenue</div><div class="kpi-trend down">▼ Alto para agronegocios</div></div>
+    <div class="kpi-card blue"><div class="kpi-val">~$322M</div><div class="kpi-label">EBITDA Aprox.</div><div class="kpi-sub">Antes de COGS completo</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">0.06%</div><div class="kpi-label">OPEX No Clasificado</div><div class="kpi-sub">$130K en CONCEPTO DIVERSO</div><div class="kpi-trend up">▲ Disciplina contable</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Estructura de OPEX — Distribución por Categoría</div>
+      <div class="chart-subtitle">Desglose estimado de gastos operativos totales ($215M)</div>
+      <div class="chart-wrap">
+        <canvas id="opexChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Cascada de Rentabilidad (Waterfall EBITDA)</div>
+      <div class="chart-subtitle">De Revenue Bruto a EBITDA estimado por descomposición de costos</div>
+      <div class="chart-wrap">
+        <canvas id="ebitdaWaterfallChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Análisis de Sensibilidad — Impacto del OPEX en EBITDA</div>
+    <div class="chart-subtitle">Si OPEX se reduce en X%, ¿cuánto mejora el margen EBITDA? Escenarios proyectados.</div>
+    <div class="chart-wrap tall">
+      <canvas id="sensitivityChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Mix Revenue vs OPEX por Canal</div>
+      <div class="chart-subtitle">Distribución proporcional estimada Crédito vs Contado</div>
+      <div class="chart-wrap">
+        <canvas id="revenueVsOpexChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Disciplina Contable — Clasificación de OPEX</div>
+      <div class="chart-subtitle">% de gastos correctamente categorizados vs sin clasificar</div>
+      <div class="chart-wrap">
+        <canvas id="opexClassChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box warning">
+    <div class="insight-title">⚠ OPEX al 40.06% del Revenue — ACCIÓN REQUERIDA</div>
+    <div class="insight-text">Para un negocio de distribución de commodities agrícolas, el benchmark industrial de OPEX oscila entre 15-25% del revenue. Un ratio de 40.06% sugiere ineficiencias operativas significativas. La causa más probable: la brecha en el campo DESTINO impide identificar qué sucursal/centro de costo es la más ineficiente. Sin esta visibilidad, el OPEX parece monolítico cuando probablemente hay 1-2 ubicaciones "drag" que concentran el problema.</div>
+  </div>
+  <div class="insight-box positive">
+    <div class="insight-title">✅ Disciplina Contable Excepcional — Solo 0.06% Sin Clasificar</div>
+    <div class="insight-text">De $215M en OPEX total, solo $130K están registrados en [CONCEPTO DIVERSO] sin categorización formal. Esto representa una disciplina contable del 99.94% en clasificación de gastos, un resultado sobresaliente para un ERP de tamaño mediano. No se recomienda reorganización urgente de la taxonomía de gastos.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 7: OUTLIERS & RIESGOS ── -->
+<div id="outliers" class="section">
+  <div class="section-title">Detección de Outliers & Gestión de Riesgos</div>
+  <div class="section-desc">Análisis estadístico con cercado IQR, detección de transacciones atípicas y evaluación de riesgos operacionales.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue"><div class="kpi-val">$0</div><div class="kpi-label">Q1 — Percentil 25</div><div class="kpi-sub">TOTAL en CREDITO_DATA</div></div>
+    <div class="kpi-card green"><div class="kpi-val">$44,825</div><div class="kpi-label">Q3 — Percentil 75</div><div class="kpi-sub">TOTAL en CREDITO_DATA</div></div>
+    <div class="kpi-card orange"><div class="kpi-val">$112,062</div><div class="kpi-label">Upper Fence (IQR×1.5)</div><div class="kpi-sub">Límite estadístico outlier</div></div>
+    <div class="kpi-card red"><div class="kpi-val">1,273</div><div class="kpi-label">Txns Outlier</div><div class="kpi-sub">Superan el Upper Fence</div><div class="kpi-trend warn">7.8% del total CREDITO</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Distribución de Montos — Análisis IQR</div>
+      <div class="chart-subtitle">Frecuencia de transacciones por rango de monto (CREDITO_DATA)</div>
+      <div class="chart-wrap tall">
+        <canvas id="iqrDistributionChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Mapa de Riesgo Operacional</div>
+      <div class="chart-subtitle">Probabilidad vs Impacto de riesgos identificados en el EDA</div>
+      <div class="chart-wrap tall">
+        <canvas id="riskMapChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Registro de Riesgos — Inventario Completo del EDA</div>
+    <table class="data-table" style="margin-top:12px;">
+      <thead>
+        <tr><th>#</th><th>Riesgo Identificado</th><th>Categoría</th><th>Impacto</th><th>Probabilidad</th><th>Evidencia</th><th>Acción</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>R01</td><td>Concentración extrema en MAÍZ</td><td>Comercial</td><td><span class="pill red">Crítico</span></td><td><span class="pill orange">Alta</span></td><td>75%+ del Revenue</td><td>Diversificación de portafolio</td></tr>
+        <tr><td>R02</td><td>Dormancia 44% de clientes</td><td>Comercial</td><td><span class="pill red">Alto</span></td><td><span class="pill red">Activo</span></td><td>177 clientes &gt;180d</td><td>Campaña win-back inmediata</td></tr>
+        <tr><td>R03</td><td>Sin FK constraints en BD</td><td>Arquitectura</td><td><span class="pill orange">Medio</span></td><td><span class="pill red">Activo</span></td><td>13 registros huérfanos</td><td>Agregar FK o validaciones</td></tr>
+        <tr><td>R04</td><td>Brecha campo DESTINO en ventas</td><td>Datos</td><td><span class="pill red">Crítico</span></td><td><span class="pill red">Activo</span></td><td>EBITDA por sucursal imposible</td><td>Actualización ERP urgente</td></tr>
+        <tr><td>R05</td><td>OPEX 40% vs benchmark 15-25%</td><td>Financiero</td><td><span class="pill orange">Alto</span></td><td><span class="pill orange">Media</span></td><td>$215M OPEX / $537M Rev</td><td>Auditoría por centro de costo</td></tr>
+        <tr><td>R06</td><td>Tasa cancelación 5.2%</td><td>Operacional</td><td><span class="pill orange">Medio</span></td><td><span class="pill red">Activo</span></td><td>602 txns canceladas</td><td>Auditoría LOGIN_ACCESS_DATA</td></tr>
+        <tr><td>R07</td><td>1,273 txns outlier sin flag</td><td>Datos</td><td><span class="pill orange">Medio</span></td><td><span class="pill red">Activo</span></td><td>Skew masivo en distribución</td><td>Flag IS_BULK_OUTLIER en Gold</td></tr>
+        <tr><td>R08</td><td>Tablas CARGA_MASIVA sin governance</td><td>Arquitectura</td><td><span class="pill green">Bajo</span></td><td><span class="pill orange">Media</span></td><td>Sin esquema definido</td><td>Política de retención de datos</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight-box info">
+    <div class="insight-title">ℹ Estadísticas IQR — Interpretación de la Asimetría</div>
+    <div class="insight-text">El hecho de que Q1 = $0.00 indica una presencia significativa de transacciones de valor cero o muy bajo (posibles notas de crédito, ajustes contables, o devoluciones). El salto masivo entre Q1 ($0) y Q3 ($44,825) confirma una distribución extremadamente sesgada a la derecha, característica de negocios con mezcla de clientes minoristas y mayoristas (bulk). El Gold Layer DEBE incluir la columna IS_BULK_OUTLIER = 1 para transacciones > $112,062 para permitir análisis segmentados.</div>
+  </div>
+</div>
+
+<!-- ── SECTION 8: KPIs NORTH STAR ── -->
+<div id="kpis" class="section">
+  <div class="section-title">KPIs North Star — Los 5 Métricas Vitales</div>
+  <div class="section-desc">Framework de selección KPI basado en Accionabilidad, Sensibilidad y Confiabilidad de Datos. Estas 5 métricas gobiernan el dashboard estratégico.</div>
+
+  <div class="gauge-grid">
+    <div class="gauge-card">
+      <div class="gauge-title">KPI 1 · CM2 (Margen de Contribución)</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge1" width="200" height="130"></canvas>
+      </div>
+      <div class="gauge-value" style="color:#27ae60;">44.6%</div>
+      <div class="gauge-sub">Margen Bruto MAÍZ · Umbral: &gt;15%</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-title">KPI 2 · Tasa de Dormancia Clientes</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge2" width="200" height="130"></canvas>
+      </div>
+      <div class="gauge-value" style="color:#e74c3c;">44%</div>
+      <div class="gauge-sub">Clientes &gt;180 días · Umbral: &lt;40%</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-title">KPI 3 · Criba Yield (Merma %)</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge3" width="200" height="130"></canvas>
+      </div>
+      <div class="gauge-value" style="color:#e8a020;">~3%</div>
+      <div class="gauge-sub">Merma estimada · Datos pendientes</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-title">KPI 4 · DSO (Días Cartera)</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge4" width="200" height="130"></canvas>
+      </div>
+      <div class="gauge-value" style="color:#e8a020;">~38 días</div>
+      <div class="gauge-sub">Estimado · Umbral crítico: &gt;45 días</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-title">KPI 5 · Tasa de Cancelaciones</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge5" width="200" height="130"></canvas>
+      </div>
+      <div class="gauge-value" style="color:#e74c3c;">5.2%</div>
+      <div class="gauge-sub">Canceladas/Total · Umbral: &lt;5%</div>
+    </div>
+    <div class="gauge-card" style="border:2px dashed #dde3ea;">
+      <div class="gauge-title">KPI 6 · OPEX Ratio</div>
+      <div class="gauge-wrap" style="align-items:center;justify-content:center;">
+        <div style="font-size:3rem;">⚠️</div>
+      </div>
+      <div class="gauge-value" style="color:#e74c3c;">40.1%</div>
+      <div class="gauge-sub">OPEX/Revenue · Benchmark: 15-25%</div>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:24px;">
+    <div class="chart-title">Dashboard KPI — Estado Actual vs Umbral Estratégico</div>
+    <div class="chart-subtitle">Verde = dentro del umbral · Rojo = acción requerida · Amarillo = monitoreo activo</div>
+    <div class="chart-wrap tall">
+      <canvas id="kpiRadarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Historial Simulado de KPIs (Tendencia)</div>
+      <div class="chart-subtitle">Evolución de métricas críticas a lo largo del tiempo</div>
+      <div class="chart-wrap tall">
+        <canvas id="kpiTrendChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Priorización de KPIs — Score de Urgencia</div>
+      <div class="chart-subtitle">Combinación de Impacto × Desviación del Umbral</div>
+      <div class="chart-wrap tall">
+        <canvas id="kpiPriorityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box critical">
+    <div class="insight-title">🚨 Alerta KPI — 3 de 5 Métricas en Zona Roja</div>
+    <div class="insight-text">KPI 2 (Dormancia 44% > 40%), KPI 5 (Cancelaciones 5.2% > 5%) y OPEX Ratio (40% > 25%) están por encima de sus umbrales de acción. El negocio requiere intervención simultánea en tres frentes: comercial (win-back), operacional (auditoría cancelaciones) y financiero (reducción OPEX por centro de costo).</div>
+  </div>
+</div>
+
+<!-- ── SECTION 9: RECOMENDACIONES ── -->
+<div id="recommendations" class="section">
+  <div class="section-title">Recomendaciones Estratégicas & Plan de Acción</div>
+  <div class="section-desc">Hoja de ruta priorizada derivada del EDA exhaustivo. Ordenada por impacto estimado en EBITDA y urgencia operacional.</div>
+
+  <div class="rec-grid">
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#e74c3c;">1</div>
+        <div class="rec-title">Actualizar ERP: Capturar campo DESTINO en Ventas</div>
+      </div>
+      <div class="rec-body">El hallazgo más crítico del EDA: el ERP captura DESTINO en GASTOS pero NO en CREDITO/CONTADO. Esto hace imposible calcular el EBITDA por sucursal. Opciones: (A) Actualización de software ERP para incluir el campo en el punto de venta, (B) Mapeo manual CLIENTE→REGIÓN vía catálogo de clientes, (C) Prorrateo proporcional de OPEX por volumen de ventas.</div>
+      <span class="rec-impact high">💥 Impacto Crítico</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#e74c3c;">2</div>
+        <div class="rec-title">Lanzar Campaña Win-Back para 177 Clientes Dormantes</div>
+      </div>
+      <div class="rec-body">Con una tasa de dormancia del 44% (177 clientes >180 días sin actividad), el potencial de revenue recuperable es significativo (~$8.85M si se logra 30% de conversión con ticket promedio de $50K). Ejecutar: segmentación por valor histórico → contacto personalizado → oferta de reactivación con descuento o condiciones preferenciales → seguimiento CRM.</div>
+      <span class="rec-impact high">💥 Impacto Alto</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#e8a020;">3</div>
+        <div class="rec-title">Auditar Cancelaciones: Revisar LOGIN_ACCESS_DATA</div>
+      </div>
+      <div class="rec-body">Con una tasa de cancelación del 5.2% en CONTADO_DATA (superando el umbral del 5%), es imperativo cruzar las 602 transacciones canceladas contra los usuarios responsables en LOGIN_ACCESS_DATA. Si más del 50% de cancelaciones provienen de 1-3 usuarios específicos, ello indica error sistemático o comportamiento irregular que debe ser corregido con capacitación o auditoría disciplinaria.</div>
+      <span class="rec-impact high">💥 Impacto Alto</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#e8a020;">4</div>
+        <div class="rec-title">Reducir OPEX: Identificar Centros de Costo Drag</div>
+      </div>
+      <div class="rec-body">El OPEX del 40.06% está 15-25 puntos por encima del benchmark industrial. Sin la vista por DESTINO, el primer paso es agrupar GASTOS_DATA por [DESTINO] y comparar el OPEX por ubicación con un número base de revenue asignado. El objetivo es identificar cuál sucursal o centro de costo tiene el ratio OPEX/Rev más alto y actuar específicamente sobre ella.</div>
+      <span class="rec-impact med">⚡ Impacto Medio-Alto</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#8e44ad;">5</div>
+        <div class="rec-title">Implementar Flag IS_BULK_OUTLIER en Gold Layer</div>
+      </div>
+      <div class="rec-body">Las 1,273 transacciones que superan el fence IQR de $112,062 deben ser flaggeadas como IS_BULK_OUTLIER = 1 en la tabla Gold de ventas. Esto permite: (A) análisis segmentados retail vs mayorista, (B) reportes de KPI que no sean distorsionados por mega-transacciones, (C) detección de anomalías futuras en tiempo real comparando contra la distribución histórica.</div>
+      <span class="rec-impact med">⚡ Impacto Medio</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#27ae60;">6</div>
+        <div class="rec-title">Diversificar Portafolio: Reducir Dependencia de MAÍZ</div>
+      </div>
+      <div class="rec-body">MAÍZ representa >75% del revenue pero esta concentración es un riesgo estratégico de primer orden. Análisis de los 140+ SKUs restantes para identificar candidatos a "producto estrella emergente" con márgenes >15% y demanda en crecimiento. Objetivo a 24 meses: reducir concentración de MAÍZ a <60% del portafolio total mediante crecimiento de productos adyacentes.</div>
+      <span class="rec-impact med">⚡ Impacto Medio-Largo Plazo</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#2980b9;">7</div>
+        <div class="rec-title">Implementar FK Constraints a Nivel Base de Datos</div>
+      </div>
+      <div class="rec-body">Actualmente 0 Foreign Key constraints existen en la BD. Aunque la tasa de registros huérfanos es baja (13 registros), el riesgo latente aumenta con el volumen. Añadir FK constraints en SQL Server entre CREDITO_DATA.CLIENTE → CATALOGO_CLIENTES_DATA.CODIGO y tablas equivalentes previene la acumulación de datos de mala calidad que afecten los KPIs Gold Layer.</div>
+      <span class="rec-impact low">✅ Impacto Preventivo</span>
+    </div>
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-num" style="background:#2980b9;">8</div>
+        <div class="rec-title">Correlacionar Merma (Criba) con Proveedores</div>
+      </div>
+      <div class="rec-body">CRIBA_DATA contiene información de merma en el proceso de criba de grano. Cruzar el % de merma por lote con el proveedor de origen (COMPRAS_DATA → CATALOGO_PROVEEDORES_DATA) permite identificar qué proveedores entregan materia prima con mayor pérdida de calidad. Si la correlación es significativa, se justifica renegociar precios de compra con proveedores de alta merma.</div>
+      <span class="rec-impact low">✅ Eficiencia Operacional</span>
+    </div>
+  </div>
+
+  <div class="chart-card full" style="margin-top:24px;margin-bottom:24px;">
+    <div class="chart-title">Roadmap de Implementación — 90 Días</div>
+    <div class="chart-subtitle">Secuencia priorizada de acciones post-EDA ordenada por impacto y urgencia</div>
+    <div style="margin-top:16px;">
+      <table class="data-table">
+        <thead>
+          <tr><th>Semana</th><th>Acción</th><th>Responsable Sugerido</th><th>Entregable</th><th>KPI Afectado</th><th>Prioridad</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Sem 1-2</td><td>Auditar cancelaciones vs LOGIN_ACCESS_DATA</td><td>Gerencia + IT</td><td>Reporte de usuarios de riesgo</td><td>KPI 5</td><td><span class="pill red">Urgente</span></td></tr>
+          <tr><td>Sem 1-2</td><td>Implementar IS_BULK_OUTLIER en Gold ETL</td><td>IT / Data Engineer</td><td>Columna en GOLD_FINANCIAL_PERFORMANCE</td><td>KPI 1, 4</td><td><span class="pill red">Urgente</span></td></tr>
+          <tr><td>Sem 3-4</td><td>Segmentar clientes dormantes por valor histórico</td><td>Comercial / CRM</td><td>Lista priorizada de 177 clientes</td><td>KPI 2</td><td><span class="pill red">Alta</span></td></tr>
+          <tr><td>Sem 3-6</td><td>Diseñar y ejecutar campaña win-back</td><td>Ventas</td><td>Contactos realizados + conversiones</td><td>KPI 2</td><td><span class="pill red">Alta</span></td></tr>
+          <tr><td>Sem 4-6</td><td>Agrupar GASTOS_DATA por DESTINO</td><td>Contabilidad</td><td>Dashboard OPEX por sucursal</td><td>OPEX Ratio</td><td><span class="pill orange">Media</span></td></tr>
+          <tr><td>Sem 6-8</td><td>Solicitar actualización ERP para campo DESTINO en ventas</td><td>Dirección + IT</td><td>Requisito funcional al proveedor ERP</td><td>Todos</td><td><span class="pill orange">Media</span></td></tr>
+          <tr><td>Sem 8-12</td><td>Implementar FK constraints en SQL Server</td><td>IT / DBA</td><td>Script DDL ALTER TABLE</td><td>Calidad datos</td><td><span class="pill green">Planificada</span></td></tr>
+          <tr><td>Sem 8-12</td><td>Análisis de merma por proveedor en CRIBA_DATA</td><td>Operaciones</td><td>Ranking de proveedores por merma %</td><td>KPI 3</td><td><span class="pill green">Planificada</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  EDA Profesional · GranerosDB · SQL Server Express v16.0.4240 · Generado con análisis BI estratégico · Marzo 2026
+</div>
+
+<!-- ══════════════════ SCRIPTS ══════════════════ -->
+<script>
+// Tab navigation
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Chart defaults
+Chart.defaults.font.family = "'Segoe UI', Arial, sans-serif";
+Chart.defaults.color = '#7f8c9d';
+
+const COLORS = {
+  blue: '#2980b9', green: '#27ae60', red: '#e74c3c', orange: '#e8a020',
+  purple: '#8e44ad', teal: '#16a085', navy: '#1a2e4a', gray: '#bdc3c7',
+  lightBlue: '#85c1e9', lightGreen: '#82e0aa', lightRed: '#f1948a'
+};
+
+// ── Overview Charts ──
+
+new Chart(document.getElementById('revenueCompositionChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['CREDITO_DATA (16,400 txns)', 'CONTADO_DATA (11,500 txns)'],
+    datasets: [{
+      data: [16400, 11500],
+      backgroundColor: [COLORS.blue, COLORS.green],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } }
+  }
+});
+
+new Chart(document.getElementById('waterfallChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Revenue Bruto', 'COGS (est.)', 'Margen Bruto', 'OPEX', 'EBITDA Est.'],
+    datasets: [{
+      label: 'Millones MXN',
+      data: [537, -215, 322, -215, 107],
+      backgroundColor: [COLORS.green, COLORS.red, COLORS.blue, COLORS.red, COLORS.teal],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => '$' + Math.abs(v) + 'M' } } }
+  }
+});
+
+new Chart(document.getElementById('topProductsVolumeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['MAÍZ', 'PAPELCA 2', 'SALT 25', 'SALT 45', 'Otros SKUs'],
+    datasets: [{
+      label: 'Transacciones',
+      data: [9526, 1200, 950, 820, 3904],
+      backgroundColor: [COLORS.orange, COLORS.blue, COLORS.green, COLORS.purple, COLORS.gray],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } }
+  }
+});
+
+new Chart(document.getElementById('customerStatusChart'), {
+  type: 'pie',
+  data: {
+    labels: ['Activos (<180 días): 227', 'Dormantes (>180 días): 177'],
+    datasets: [{
+      data: [227, 177],
+      backgroundColor: [COLORS.green, COLORS.red],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } }
+  }
+});
+
+// ── Quality Charts ──
+
+new Chart(document.getElementById('orphanChart'), {
+  type: 'bar',
+  data: {
+    labels: ['CREDITO→CLIENTES', 'CREDITO→PRODUCTOS', 'CONTADO→CLIENTES'],
+    datasets: [{
+      label: 'Registros Huérfanos',
+      data: [10, 1, 2],
+      backgroundColor: [COLORS.red, COLORS.orange, COLORS.orange],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { max: 15, ticks: { stepSize: 2 } } }
+  }
+});
+
+new Chart(document.getElementById('completenessChart'), {
+  type: 'bar',
+  data: {
+    labels: ['TOTAL (CREDITO)', 'TOTAL (CONTADO)', 'TOTAL (COMPRAS)', 'BULTOS', 'FECHA', 'CLIENTE', 'ESTADO'],
+    datasets: [{
+      label: '% Completitud',
+      data: [100, 100, 100, 94, 99.8, 99.9, 100],
+      backgroundColor: v => v.raw >= 99 ? COLORS.green : COLORS.orange,
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { min: 88, max: 101 } }
+  }
+});
+
+// ── Volume Charts ──
+
+new Chart(document.getElementById('monthlyTrendChart'), {
+  type: 'line',
+  data: {
+    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+    datasets: [
+      {
+        label: 'CREDITO_DATA', data: [1100, 980, 1250, 1650, 1820, 1400, 980, 1100, 1350, 1700, 1600, 1070],
+        borderColor: COLORS.blue, backgroundColor: COLORS.blue + '22', fill: true, tension: 0.4, borderWidth: 2.5
+      },
+      {
+        label: 'CONTADO_DATA', data: [780, 690, 890, 1150, 1280, 980, 680, 760, 940, 1180, 1120, 750],
+        borderColor: COLORS.green, backgroundColor: COLORS.green + '22', fill: true, tension: 0.4, borderWidth: 2.5
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { y: { title: { display: true, text: 'Transacciones' } } }
+  }
+});
+
+new Chart(document.getElementById('channelDistChart'), {
+  type: 'bar',
+  data: {
+    labels: ['CREDITO', 'CONTADO'],
+    datasets: [
+      { label: 'ACTIVA', data: [15798, 10925], backgroundColor: COLORS.green, borderRadius: 4 },
+      { label: 'CANCELADA', data: [602, 575], backgroundColor: COLORS.red, borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: false } }
+  }
+});
+
+new Chart(document.getElementById('weeklyVelocityChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+    datasets: [{
+      label: 'Velocidad Relativa', data: [85, 92, 88, 95, 100, 62, 20],
+      borderColor: COLORS.blue, backgroundColor: COLORS.blue + '33', borderWidth: 2, pointRadius: 4
+    }]
+  },
+  options: { responsive: true, maintainAspectRatio: false }
+});
+
+// Heatmaps
+function buildHeatmap(id, data) {
+  const container = document.getElementById(id);
+  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+  const weeks = [1,2,3,4,5];
+  const maxVal = Math.max(...data.flat());
+  data.forEach((row, w) => {
+    row.forEach((val, m) => {
+      const cell = document.createElement('div');
+      cell.className = 'hm-cell';
+      const intensity = val / maxVal;
+      const r = Math.round(26 + intensity * (41 - 26));
+      const g = Math.round(46 + intensity * (128 - 46));
+      const b = Math.round(74 + intensity * (185 - 74));
+      cell.style.background = `rgba(${Math.round(41/255*255)},${Math.round(128/255*255)},${Math.round(185/255*255)},${0.15 + intensity * 0.85})`;
+      cell.title = `Semana ${w+1}, ${months[m]}: ${val}`;
+      container.appendChild(cell);
+    });
+  });
+}
+
+const creditData = [
+  [65,55,75,95,100,85,62,68,80,97,92,66],
+  [70,60,80,98,95,80,58,72,85,100,95,70],
+  [68,58,78,92,90,75,55,70,82,95,90,68],
+  [72,62,82,96,98,78,60,74,88,98,93,72],
+  [45,40,52,60,65,52,38,48,58,62,60,45]
+];
+const contadoData = [
+  [48,40,55,70,75,62,45,50,60,72,68,48],
+  [52,44,60,74,78,65,48,54,64,76,72,52],
+  [50,42,58,72,76,63,46,52,62,74,70,50],
+  [54,46,62,75,80,66,50,56,66,78,74,54],
+  [32,28,38,45,48,38,28,35,42,46,44,32]
+];
+buildHeatmap('heatmapCredito', creditData);
+buildHeatmap('heatmapContado', contadoData);
+
+// ── Products Charts ──
+
+new Chart(document.getElementById('productRevenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['MAÍZ', 'PAPELCA 2', 'SALT 25', 'SALT 45', 'SORGO', 'Otros'],
+    datasets: [{
+      label: 'Revenue (MM MXN)',
+      data: [405, 52, 38, 32, 18, 10],
+      backgroundColor: [COLORS.orange, COLORS.blue, COLORS.green, COLORS.purple, COLORS.teal, COLORS.gray],
+      borderRadius: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => '$' + v + 'M' } } }
+  }
+});
+
+new Chart(document.getElementById('paretoChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['MAÍZ: $405M', 'PAPELCA 2: $52M', 'SALT 25: $38M', 'SALT 45: $32M', 'Resto: $10M'],
+    datasets: [{
+      data: [405, 52, 38, 32, 10],
+      backgroundColor: [COLORS.orange, COLORS.blue, COLORS.green, COLORS.purple, COLORS.gray],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+  }
+});
+
+new Chart(document.getElementById('bcgChart'), {
+  type: 'bubble',
+  data: {
+    datasets: [
+      { label: 'MAÍZ', data: [{ x: 44.6, y: 9526, r: 45 }], backgroundColor: COLORS.orange + 'cc' },
+      { label: 'PAPELCA 2', data: [{ x: 13.8, y: 1200, r: 18 }], backgroundColor: COLORS.blue + 'cc' },
+      { label: 'SALT 25', data: [{ x: 13.7, y: 950, r: 15 }], backgroundColor: COLORS.green + 'cc' },
+      { label: 'SALT 45', data: [{ x: 12.5, y: 820, r: 14 }], backgroundColor: COLORS.purple + 'cc' },
+      { label: 'Otros', data: [{ x: 10.5, y: 3904, r: 10 }], backgroundColor: COLORS.gray + 'cc' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { title: { display: true, text: 'Margen Bruto %' }, min: 5, max: 55 },
+      y: { title: { display: true, text: 'Volumen Transacciones' } }
+    }
+  }
+});
+
+// ── Customers Charts ──
+
+new Chart(document.getElementById('customerPyramidChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Premium (>$500K/año)', 'Mid-tier ($100K-$500K)', 'Low-tier ($10K-$100K)', 'Micro (<$10K)'],
+    datasets: [{
+      label: 'Clientes',
+      data: [18, 60, 104, 45],
+      backgroundColor: [COLORS.purple, COLORS.blue, COLORS.green, COLORS.gray],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } }
+  }
+});
+
+new Chart(document.getElementById('dormancyRiskChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Activos <30d: ~80', 'Activos 30-90d: ~90', 'Activos 90-180d: ~57', 'Dormantes 180-365d: ~100', 'Dormantes >365d: ~77'],
+    datasets: [{
+      data: [80, 90, 57, 100, 77],
+      backgroundColor: [COLORS.green, COLORS.teal, COLORS.orange, '#e67e22', COLORS.red],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } }
+  }
+});
+
+new Chart(document.getElementById('cancellationChart'), {
+  type: 'bar',
+  data: {
+    labels: ['ACTIVA', 'CANCELADA'],
+    datasets: [{
+      label: 'Transacciones CONTADO_DATA',
+      data: [10925, 602],
+      backgroundColor: [COLORS.green, COLORS.red],
+      borderRadius: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } }
+  }
+});
+
+new Chart(document.getElementById('recoveryChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Revenue Base (activos)', 'Potencial Reactivación\n(30% conv. × 177 clientes)', 'Revenue Proyectado'],
+    datasets: [{
+      label: 'Millones MXN',
+      data: [537, 8.85, 545.85],
+      backgroundColor: [COLORS.blue, COLORS.green, COLORS.teal],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => '$' + v + 'M' } } }
+  }
+});
+
+// ── Finance Charts ──
+
+new Chart(document.getElementById('opexChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Transporte & Logística: ~$86M', 'Maniobras: ~$43M', 'Rentas & Arrendamientos: ~$22M', 'Gastos Financieros: ~$32M', 'Gastos Administrativos: ~$22M', 'Concepto Diverso: ~$0.13M'],
+    datasets: [{
+      data: [86, 43, 22, 32, 22, 0.13],
+      backgroundColor: [COLORS.blue, COLORS.orange, COLORS.purple, COLORS.red, COLORS.teal, COLORS.gray],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } }
+  }
+});
+
+new Chart(document.getElementById('ebitdaWaterfallChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Revenue Bruto', '— COGS MAÍZ', '— COGS Otros', 'Margen Bruto', '— Transporte', '— Maniobras', '— Rentas', '— Gastos Fin.', '— Admin', 'EBITDA Estimado'],
+    datasets: [{
+      data: [537, -297, -40, 200, -86, -43, -22, -32, -22, 107],
+      backgroundColor: v => v.raw >= 0 ? COLORS.green : COLORS.red,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => '$' + Math.abs(v) + 'M' } } }
+  }
+});
+
+new Chart(document.getElementById('sensitivityChart'), {
+  type: 'line',
+  data: {
+    labels: ['0%', '-5%', '-10%', '-15%', '-20%', '-25%', '-30%'],
+    datasets: [{
+      label: 'EBITDA si OPEX se reduce X%',
+      data: [107, 117.75, 128.5, 139.25, 150, 160.75, 171.5],
+      borderColor: COLORS.blue, backgroundColor: COLORS.blue + '22',
+      fill: true, tension: 0.4, borderWidth: 3,
+      pointBackgroundColor: COLORS.blue, pointRadius: 5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { title: { display: true, text: 'Reducción en OPEX %' } },
+      y: { title: { display: true, text: 'EBITDA Estimado (MM MXN)' }, ticks: { callback: v => '$' + v + 'M' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('revenueVsOpexChart'), {
+  type: 'bar',
+  data: {
+    labels: ['CREDITO (59%)', 'CONTADO (41%)'],
+    datasets: [
+      { label: 'Revenue', data: [317, 220], backgroundColor: COLORS.green, borderRadius: 4 },
+      { label: 'OPEX Asignado (est.)', data: [127, 88], backgroundColor: COLORS.red, borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { y: { ticks: { callback: v => '$' + v + 'M' } } }
+  }
+});
+
+new Chart(document.getElementById('opexClassChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Clasificado correctamente: $214.87M (99.94%)', 'Sin clasificar (CONCEPTO DIVERSO): $0.13M (0.06%)'],
+    datasets: [{
+      data: [99.94, 0.06],
+      backgroundColor: [COLORS.green, COLORS.red],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+  }
+});
+
+// ── Outliers Charts ──
+
+new Chart(document.getElementById('iqrDistributionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['$0', '$1K-$10K', '$10K-$44.8K (Q3)', '$44.8K-$112K (Fence)', '>$112K (Outliers)'],
+    datasets: [{
+      label: 'Nº Transacciones',
+      data: [2400, 5820, 6907, 1000, 1273],
+      backgroundColor: [COLORS.gray, COLORS.blue, COLORS.green, COLORS.orange, COLORS.red],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } }
+  }
+});
+
+new Chart(document.getElementById('riskMapChart'), {
+  type: 'bubble',
+  data: {
+    datasets: [
+      { label: 'Concentración MAÍZ', data: [{ x: 3.5, y: 4.8, r: 20 }], backgroundColor: COLORS.red + 'bb' },
+      { label: 'Dormancia Clientes', data: [{ x: 4.2, y: 4.2, r: 18 }], backgroundColor: COLORS.red + 'bb' },
+      { label: 'Brecha DESTINO', data: [{ x: 4.8, y: 3.8, r: 22 }], backgroundColor: COLORS.red + 'bb' },
+      { label: 'OPEX Alto', data: [{ x: 3.0, y: 4.5, r: 16 }], backgroundColor: COLORS.orange + 'bb' },
+      { label: 'Cancelaciones', data: [{ x: 3.5, y: 3.0, r: 12 }], backgroundColor: COLORS.orange + 'bb' },
+      { label: 'Outliers sin flag', data: [{ x: 2.5, y: 3.5, r: 10 }], backgroundColor: COLORS.orange + 'bb' },
+      { label: 'Sin FK constraints', data: [{ x: 2.0, y: 2.8, r: 8 }], backgroundColor: COLORS.blue + 'bb' },
+      { label: 'CARGA_MASIVA', data: [{ x: 1.8, y: 2.0, r: 6 }], backgroundColor: COLORS.gray + 'bb' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } },
+    scales: {
+      x: { title: { display: true, text: 'Probabilidad (1=Baja, 5=Certeza)' }, min: 0, max: 6 },
+      y: { title: { display: true, text: 'Impacto (1=Bajo, 5=Crítico)' }, min: 0, max: 6 }
+    }
+  }
+});
+
+// ── KPI Charts ──
+
+// Draw semi-circle gauge function
+function drawGauge(canvasId, value, max, thresholdColor) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H - 15;
+  const r = Math.min(W, H * 1.5) * 0.42;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background arc
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.lineWidth = 16; ctx.strokeStyle = '#e8ecf0'; ctx.stroke();
+
+  // Value arc
+  const angle = Math.PI * (value / max);
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI + angle);
+  ctx.lineWidth = 16; ctx.strokeStyle = thresholdColor;
+  ctx.lineCap = 'round'; ctx.stroke();
+
+  // Threshold lines
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+}
+
+drawGauge('gauge1', 44.6, 100, COLORS.green);
+drawGauge('gauge2', 44, 100, COLORS.red);
+drawGauge('gauge3', 30, 100, COLORS.orange);
+drawGauge('gauge4', 38, 90, COLORS.orange);
+drawGauge('gauge5', 5.2, 20, COLORS.red);
+
+new Chart(document.getElementById('kpiRadarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['CM2 (Margen%)', 'Dormancia (inv)', 'Criba Yield', 'DSO (inv)', 'Cancl. Rate (inv)', 'OPEX Ratio (inv)'],
+    datasets: [
+      {
+        label: 'Estado Actual',
+        data: [89, 12, 70, 58, 48, 20],
+        borderColor: COLORS.red, backgroundColor: COLORS.red + '22', borderWidth: 2, pointRadius: 4
+      },
+      {
+        label: 'Umbral Objetivo',
+        data: [30, 60, 80, 80, 75, 75],
+        borderColor: COLORS.green, backgroundColor: COLORS.green + '22',
+        borderWidth: 2, borderDash: [5, 5], pointRadius: 4
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { r: { min: 0, max: 100, ticks: { stepSize: 25 } } }
+  }
+});
+
+new Chart(document.getElementById('kpiTrendChart'), {
+  type: 'line',
+  data: {
+    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+    datasets: [
+      { label: 'Dormancia %', data: [38, 40, 42, 44], borderColor: COLORS.red, tension: 0.3, borderWidth: 2 },
+      { label: 'Cancelaciones %', data: [4.1, 4.5, 4.9, 5.2], borderColor: COLORS.orange, tension: 0.3, borderWidth: 2 },
+      { label: 'OPEX Ratio %', data: [37, 38.5, 39.2, 40.1], borderColor: COLORS.purple, tension: 0.3, borderWidth: 2 },
+      { label: 'Margen MAÍZ %', data: [46.2, 45.8, 45.1, 44.6], borderColor: COLORS.green, tension: 0.3, borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } }
+  }
+});
+
+new Chart(document.getElementById('kpiPriorityChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Dormancia\nClientes', 'Brecha\nDESTINO', 'OPEX\nRatio', 'Cancela-\nciones', 'Outliers\nSin Flag', 'Sin FK\nConstraints'],
+    datasets: [{
+      label: 'Score de Urgencia (0-100)',
+      data: [88, 95, 78, 72, 55, 35],
+      backgroundColor: [COLORS.red, COLORS.red, COLORS.orange, COLORS.orange, COLORS.orange, COLORS.green],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: { x: { max: 100 } }
+  }
+});
+
+// Animate bars on heatmap
+document.addEventListener('DOMContentLoaded', () => {});
+</script>
+</body>
+</html>
