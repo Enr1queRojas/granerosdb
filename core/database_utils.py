@@ -10,31 +10,26 @@ load_dotenv()
 def get_db_engine():
     """
     Creates and returns a SQLAlchemy engine for MSSQL
-    using environment variables.
+    using environment variables, optimized for remote connections.
     """
-
+    # Load variables from environment
     user = os.getenv("DB_USER")
     password = os.getenv("DB_PASS")
     host = os.getenv("DB_HOST")
     port = os.getenv("DB_PORT", "1433")
     db_name = os.getenv("DB_NAME")
-    instance = os.getenv("DB_INSTANCE")
-
-    # Ajusta si tienes ODBC Driver 18 instalado
+    
+    # Driver selection (Update to 'ODBC Driver 18' if version 17 is not installed)
     driver = "ODBC Driver 17 for SQL Server"
 
-    # Si existe instancia nombrada
-    if instance:
-        server = f"{host}\\{instance}"
-        connection_url = (
-            f"mssql+pyodbc://{user}:{password}@{server}/{db_name}"
-            f"?driver={driver.replace(' ', '+')}"
-        )
-    else:
-        connection_url = (
-            f"mssql+pyodbc://{user}:{password}@{host}:{port}/{db_name}"
-            f"?driver={driver.replace(' ', '+')}"
-        )
+    # Connection URL formulation
+    # Added Encrypt and TrustServerCertificate for stable remote IP connections
+    connection_url = (
+        f"mssql+pyodbc://{user}:{password}@{host}:{port}/{db_name}"
+        f"?driver={driver.replace(' ', '+')}"
+        "&Encrypt=yes"
+        "&TrustServerCertificate=yes"
+    )
 
     try:
         engine = create_engine(
@@ -44,11 +39,15 @@ def get_db_engine():
             fast_executemany=True
         )
 
-        # Test de conexión
-        with engine.connect():
-            print("--- Database connection established successfully ---")
+        # connection test
+        with engine.connect() as conn:
+            print(f"--- Connection to {host} established successfully ---")
 
         return engine
+
+    except SQLAlchemyError as e:
+        print(f"--- Critical Error: Could not connect to database: {e} ---")
+        return None
 
     except SQLAlchemyError as e:
         print(f"--- Critical Error: Could not connect to database: {e} ---")
