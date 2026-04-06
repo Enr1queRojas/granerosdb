@@ -1,17 +1,24 @@
 import os
+import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 
 # 1. Load variables from the .env file
 load_dotenv()
 
+_engine = None
+
 def get_db_engine():
     """
     Creates and returns a SQLAlchemy engine for MSSQL
     using environment variables, optimized for remote connections.
     """
+    global _engine
+    if _engine is not None:
+        return _engine
+
     # Load variables from environment
     user = os.getenv("DB_USER")
     password = os.getenv("DB_PASS")
@@ -43,6 +50,7 @@ def get_db_engine():
         with engine.connect() as conn:
             print(f"--- Connection to {host} established successfully ---")
 
+        _engine = engine
         return engine
 
     except SQLAlchemyError as e:
@@ -52,6 +60,8 @@ def get_db_engine():
     except SQLAlchemyError as e:
         print(f"--- Critical Error: Could not connect to database: {e} ---")
         return None
+
+engine = get_db_engine()
 
 def get_database_inventory():
     """
@@ -94,5 +104,30 @@ def get_database_inventory():
 
     return inventory
 
-# --- Usage ---
-# db_structure = get_database_inventory()
+def run_query(sql_query, description="Data"):
+    """
+    Executes a SQL query and returns a pandas DataFrame.
+    :param sql_query: The SQL text or SQLAlchemy text() object.
+    :param description: A label for printing status messages.
+    :return: Pandas DataFrame or None if failed.
+    """
+    try:
+        # 1. Ensure the query is wrapped in text() if it's a raw string
+        if isinstance(sql_query, str):
+            sql_query = text(sql_query)
+            
+        engine = get_db_engine()
+        with engine.connect() as conn:
+            df = pd.read_sql_query(sql_query, conn)
+            
+        # 2. Check and report status
+        if df.empty:
+            print(f"--- Warning: No records found for [{description}]. ---")
+            return df
+        else:
+            print(f"--- Success: [{description}] retrieved with {len(df)} rows. ---")
+            return df
+            
+    except Exception as e:
+        print(f"--- Critical Error executing [{description}]: {e} ---")
+        return None
