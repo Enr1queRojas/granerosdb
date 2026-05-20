@@ -382,7 +382,6 @@ def build_dormancy_charts(df):
         labels=tree_labels,
         parents=tree_parents,
         values=tree_values,
-        branchvalues="total",
         texttemplate="%{label}<br><b>$%{value:,.0f}</b>",
         hovertemplate="%{label}<br>Ingreso: $%{value:,.0f}<extra></extra>",
         marker=dict(
