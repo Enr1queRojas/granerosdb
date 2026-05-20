@@ -1,36 +1,39 @@
 """
 Production Pipeline: Extract -> Transform -> Load to Gold
 """
-import os
-import sys
-# Ensure core module is accessible
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.database_utils import get_db_engine, run_query
 
-try:
-    from core.database_utils import get_connection
-except ImportError:
-    pass
 
-def run_profitability_engine(conn):
+def run_profitability_engine(engine):
     """
-    Survivor Logic: Calculates unit margins via JOINing CREDITO/CONTADO with COMPRAS.
-    Refactored from profitability_engine.py
+    Calculates unit margins via JOINing CREDITO/CONTADO with COMPRAS.
+    TODO: Implement profitability logic from Phase 2.2 findings.
     """
     pass
 
-def materialize_gold_view(conn):
+def materialize_gold_view(engine):
     """
-    Survivor Logic: Creates VW_GOLD_NORTH_STAR_KPI targeting top 5 EBITDA anchors.
-    Refactored from gold_kpi_layer.sql
+    Creates VW_GOLD_NORTH_STAR_KPI targeting top 5 EBITDA anchors.
+    TODO: Execute sql/gold_kpi_layer.sql against the database.
     """
     pass
 
 def execute_pipeline():
+    """
+    Main pipeline orchestrator.
+    Connects to the database and runs all ETL steps in sequence.
+    """
     print("Initiating Production ETL Pipeline...")
-    # conn = get_connection()
-    # run_profitability_engine(conn)
-    # materialize_gold_view(conn)
-    # conn.close()
+
+    engine = get_db_engine()
+    if not engine:
+        print("--- Pipeline aborted: no database connection. ---")
+        return
+
+    # TODO: Uncomment as each step is implemented
+    # run_profitability_engine(engine)
+    # materialize_gold_view(engine)
+
     print("Pipeline executed successfully.")
 
 if __name__ == "__main__":

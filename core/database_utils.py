@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 
-# 1. Load variables from the .env file
+# Load variables from the .env file
 load_dotenv()
 
 _engine = None
@@ -14,6 +14,7 @@ def get_db_engine():
     """
     Creates and returns a SQLAlchemy engine for MSSQL
     using environment variables, optimized for remote connections.
+    Uses a module-level singleton to avoid repeated connections.
     """
     global _engine
     if _engine is not None:
@@ -25,7 +26,13 @@ def get_db_engine():
     host = os.getenv("DB_HOST")
     port = os.getenv("DB_PORT", "1433")
     db_name = os.getenv("DB_NAME")
-    
+
+    # Validate that required variables are present
+    if not all([user, password, host, db_name]):
+        print("--- Error: Missing database credentials in .env file. ---")
+        print("--- Copy .env.example to .env and fill in your credentials. ---")
+        return None
+
     # Driver selection (Update to 'ODBC Driver 18' if version 17 is not installed)
     driver = "ODBC Driver 17 for SQL Server"
 
@@ -46,7 +53,7 @@ def get_db_engine():
             fast_executemany=True
         )
 
-        # connection test
+        # Connection test
         with engine.connect() as conn:
             print(f"--- Connection to {host} established successfully ---")
 
@@ -57,28 +64,24 @@ def get_db_engine():
         print(f"--- Critical Error: Could not connect to database: {e} ---")
         return None
 
-    except SQLAlchemyError as e:
-        print(f"--- Critical Error: Could not connect to database: {e} ---")
-        return None
 
-engine = get_db_engine()
+# Alias for backward compatibility with pipeline imports
+get_connection = get_db_engine
+
 
 def get_database_inventory():
     """
     Connects to the database and retrieves a complete inventory of 
     the schema, tables, and variables (columns).
     """
-    # 1. Initialize the connection engine
     engine = get_db_engine()
     
     if not engine:
         print("--- Error: Could not establish engine connection. ---")
         return None
 
-    # 2. Create the inspector object to read metadata
     inspector = inspect(engine)
     
-    # 3. Retrieve schema information
     db_name = engine.url.database
     tables = inspector.get_table_names()
     
@@ -87,18 +90,14 @@ def get_database_inventory():
     print(f"--- Database Inventory: {db_name} ---")
     print(f"Total tables found: {len(tables)}\n")
 
-    # 4. Loop through each table to extract variables
     for table_name in tables:
         columns_data = inspector.get_columns(table_name)
         
-        # Store column names for the return dictionary
         column_names = [col['name'] for col in columns_data]
         inventory[table_name] = column_names
         
-        # Detailed print for immediate inspection
         print(f"Table: {table_name}")
         for col in columns_data:
-            # col['name'] = variable name, col['type'] = data type
             print(f"  - {col['name']} ({col['type']})")
         print("-" * 30)
 
@@ -112,15 +111,17 @@ def run_query(sql_query, description="Data"):
     :return: Pandas DataFrame or None if failed.
     """
     try:
-        # 1. Ensure the query is wrapped in text() if it's a raw string
         if isinstance(sql_query, str):
             sql_query = text(sql_query)
             
         engine = get_db_engine()
+        if not engine:
+            print(f"--- Error: No engine available for [{description}]. ---")
+            return None
+
         with engine.connect() as conn:
             df = pd.read_sql_query(sql_query, conn)
             
-        # 2. Check and report status
         if df.empty:
             print(f"--- Warning: No records found for [{description}]. ---")
             return df

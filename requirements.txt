@@ -1,0 +1,7 @@
+pandas>=2.0
+sqlalchemy>=2.0,<2.1
+greenlet==3.1.1
+pyodbc>=5.0
+python-dotenv>=1.0
+openpyxl>=3.1
+plotly>=6.0
